@@ -1,58 +1,62 @@
 # ISV Doc Analyzer
 
-Outil d'analyse automatique de documentation éditeur (ISV) pour la qualification de progiciels sur OpenShift.
+Automated analysis of vendor (ISV) documentation for OpenShift deployment qualification.
 
-## Problème
+## Problem
 
-Dans le cadre du programme MoveToCloud2027, chaque progiciel éditeur doit être qualifié avant déploiement sur OpenShift. Aujourd'hui, cette qualification commence par une étape manuelle : un consultant lit la documentation éditeur (souvent 100+ pages, pensée pour un déploiement VM) et en extrait les prérequis techniques qu'il mappe ensuite vers les concepts OpenShift (SCC, RBAC, PVC, NetworkPolicies, etc.).
+Before deploying any third-party software on OpenShift, a consultant must first read the vendor's installation documentation — often 100+ pages written for traditional VM deployments, not Kubernetes. The critical information is scattered: network ports in chapter 4, storage requirements in an appendix, security constraints buried in system prerequisites.
 
-Ce travail prend **1 à 2 jours par progiciel**, est répétitif, et constitue le principal bottleneck de l'onboarding applicatif.
+The consultant spends **1 to 2 days per application** extracting technical prerequisites and mentally mapping them to OpenShift concepts (SCC, RBAC, PVC, NetworkPolicies, etc.). For migration programs involving 30-50 applications, this adds up to weeks of repetitive work before a single line of YAML is written.
 
-Les outils déterministes du pipeline existant (Conftest/OPA, kube-linter, kubeconform) interviennent **après** — ils valident un Helm chart ou un manifest YAML une fois qu'il existe. Mais personne n'automatise la première étape : lire la doc éditeur et en extraire les spécifications OpenShift.
+Existing deterministic tools in the qualification pipeline (Conftest/OPA, kube-linter, kubeconform) operate **downstream** — they validate a Helm chart or manifest once it exists. But no one automates the **upstream** step: reading vendor documentation and extracting OpenShift specifications.
 
-**Lightspeed** (Ansible, OpenShift) ne couvre pas non plus ce besoin : il assiste dans la console ou dans Ansible, pas en amont sur de la documentation externe.
+**Red Hat Lightspeed** doesn't cover this either — it assists inside the OpenShift console or Ansible, not upstream on external vendor documentation.
 
 ## Solution
 
-ISV Doc Analyzer prend un document éditeur (PDF, Markdown, texte) en entrée et produit un **rapport de qualification structuré** :
+ISV Doc Analyzer takes a vendor document (PDF, Markdown, text) as input and produces a **structured qualification report**:
 
 ```
-Doc éditeur (PDF) → [ISV Doc Analyzer] → Rapport de qualification OpenShift
+Vendor doc (PDF) → [ISV Doc Analyzer] → OpenShift Qualification Report
                                                │
-                                               ├── Prérequis réseau → Services, Routes, NetworkPolicies
-                                               ├── Prérequis stockage → PVC, StorageClass (RWO/RWX)
-                                               ├── Prérequis sécurité → SCC, RBAC, ServiceAccount
-                                               ├── Dépendances externes → Operators, services externes
-                                               ├── Ressources compute → Requests/Limits, HPA
-                                               ├── Alertes d'incompatibilité → 🔴 🟡 🟢 classées
-                                               └── Checklist OK/KO → Verdict par critère
+                                               ├── Networking     → Services, Routes, NetworkPolicies
+                                               ├── Storage        → PVC, StorageClass (RWO/RWX)
+                                               ├── Security       → SCC, RBAC, ServiceAccount
+                                               ├── Dependencies   → Operators, external services
+                                               ├── Compute        → Requests/Limits, HPA
+                                               ├── Compatibility  → 🔴 🟡 🟢 rated alerts
+                                               └── Checklist      → Pass/Fail per criterion
 ```
 
-Le rapport alimente directement le pipeline de qualification existant, en remplaçant 1-2 jours de lecture manuelle par ~2 heures de revue assistée.
+The report feeds directly into the existing qualification pipeline, replacing 1-2 days of manual reading with ~2 hours of assisted review.
 
-## Utilisation
+## Usage
 
 ```bash
 pip install -r requirements.txt
 export ANTHROPIC_API_KEY="sk-..."
 
-python src/analyzer.py document_editeur.pdf
-python src/analyzer.py document_editeur.pdf --model claude-sonnet-5
+python src/analyzer.py vendor_doc.pdf
+python src/analyzer.py vendor_doc.pdf --model claude-sonnet-5
 ```
 
-Sortie : un fichier `*_qualification_report.md` dans le même répertoire.
+Output: a `*_qualification_report.md` file in the same directory.
 
-## Exemple
+## Example
 
-Voir le dossier `examples/` :
-- `uipath_orchestrator_install_guide.md` — documentation simulée d'un éditeur RPA
-- `uipath_orchestrator_qualification_report.md` — rapport de qualification généré
+See the `examples/` folder:
+- `uipath_orchestrator_install_guide.md` — simulated vendor documentation for a RPA platform
+- `uipath_orchestrator_qualification_report.md` — generated qualification report
 
 ## Roadmap
 
-| Phase | Objectif | Quarter |
-|-------|----------|---------|
-| **1 — MVP** | Script fonctionnel + prompt structuré + exemple UiPath | Q actuel |
-| **2 — Intégration pipeline** | Sortie JSON compatible Conftest, intégration CI/CD | Q+1 |
-| **3 — Multi-sources** | Support Word/HTML, enrichissement par base de connaissances des qualifs passées | Q+2 |
-| **4 — Interface** | CLI enrichie ou interface web, feedback loop consultants | Q+3 |
+| Phase | Goal | Timeline |
+|-------|------|----------|
+| **1 — MVP** | Working script + structured prompt + UiPath example | Current quarter |
+| **2 — Pipeline integration** | JSON output compatible with Conftest, CI/CD integration | Q+1 |
+| **3 — Multi-source** | Word/HTML support, knowledge base from past qualifications | Q+2 |
+| **4 — Interface** | CLI improvements or web UI, consultant feedback loop | Q+3 |
+
+## Context
+
+The `docs/` folder contains research articles on AI agents for Red Hat consultants that led to this project.
